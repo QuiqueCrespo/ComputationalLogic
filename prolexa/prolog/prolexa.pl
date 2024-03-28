@@ -27,7 +27,7 @@ stored_rule(1, [(human(donald):-true)]).
 
 
 
-add stored rules for the negation
+%add stored rules for the negation
 stored_rule(1, [(teacher(X):-happy(X))]).
 %stored_rule(1, [(happy(X):-teacher(X))]).
 
