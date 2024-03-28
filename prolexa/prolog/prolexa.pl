@@ -10,8 +10,9 @@
 :- use_module(library(http/http_open)).
 :- use_module(library(http/json)).
 
-:- consult(prolexa_engine).		% meta-interpreter
-:- consult(prolexa_grammar).	% NLP grammar
+:- consult(prolexa_engine_negation).		% meta-interpreter
+%:- consult(prolexa_engine_existential).		% meta-interpreter
+ :- consult(prolexa_grammar).	% NLP grammar
 
 :- dynamic stored_rule/2.	% to record additions to Rulebase in a session
 
@@ -21,7 +22,20 @@
 %some intial stored rules
 stored_rule(1,[(mortal(X):-human(X))]).
 stored_rule(1,[(human(peter):-true)]).
+stored_rule(1,[(animal(ex):-true), (bird(ex):-true)]).
+stored_rule(1,[(fly(A):-bird(A))]).
+stored_rule(1, [(human(donald):-true)]).
 
+% stored_rule(1, [(not(happy(X)):-sad(X))]).
+% stored_rule(1, [(sad(X):-happy(X))]).
+
+%add stored rules for the negation
+stored_rule(1, [(teacher(X):-happy(X))]).
+% stored_rule(1, [(happy(X):-teacher(X))]).
+
+% stored_rule(1,[(teacher(peter):-true)]).
+stored_rule(1,[(happy(peter):-true)]).
+stored_rule(1, [(not(happy(donald)):-true)]).
 
 %%% Prolexa Command Line Interface %%%
 

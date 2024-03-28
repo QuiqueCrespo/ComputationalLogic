@@ -1,92 +1,133 @@
-%%% Definite Clause Grammer for prolexa utterances %%%
-
+:-op(600,xfy,'=>').
 utterance(C) --> sentence(C).
 utterance(C) --> question(C).
 utterance(C) --> command(C).
+% Grammar
 
-:- op(600, xfy, '=>').
+sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
+sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
+sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
+sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
+sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
+
+sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
+%sentence(Q) --> determiner(N,S,P,C,Q),noun(N,S),predicate(N,not(P)).
 
 
-%%% lexicon, driven by predicates %%%
+subject(N, M) --> noun_phrase(N, M).
+direct_object(N, M) --> noun_phrase(N, M).
 
-adjective(_,M)		--> [Adj],    {pred2gr(_P,1,a/Adj, M)}.
-noun(s,M)			--> [Noun],   {pred2gr(_P,1,n/Noun,M)}.
-noun(p,M)			--> [Noun_p], {pred2gr(_P,1,n/Noun,M),noun_s2p(Noun,Noun_p)}.
-iverb(s,M)			--> [Verb_s], {pred2gr(_P,1,v/Verb,M),verb_p2s(Verb,Verb_s)}.
-iverb(p,M)			--> [Verb],   {pred2gr(_P,1,v/Verb,M)}.
+predicate(N,M)  --> nominal_predicate(N,M).
+predicate(N,M)   --> intransitive_verb(N,M).
 
-% unary predicates for adjectives, nouns and verbs
-pred(human,   1,[a/human,n/human]).
-pred(mortal,  1,[a/mortal,n/mortal]).
-%pred(man,     1,[a/male,n/man]).
-%pred(woman,   1,[a/female,n/woman]).
-%pred(married, 1,[a/married]).
-%pred(bachelor,1,[n/bachelor]).
-%pred(mammal,  1,[n/mammal]).
-pred(bird,    1,[n/bird]).
-%pred(bat,     1,[n/bat]).
-pred(penguin, 1,[n/penguin]).
-pred(sparrow, 1,[n/sparrow]).
-pred(fly,     1,[v/fly]).
+noun_phrase(N, M) --> proper_noun(N, M).
+noun_phrase(p, M) --> noun(p, M).
+noun_phrase(s, M) --> [a], noun(s,M).
+noun_phrase(N, M) --> article(N), noun(N, M).
 
+
+nominal_predicate(N, M) --> nominal_verb(N), property(N,M).
+nominal_predicate(N,not(M)) --> nominal_verb(N),[not],property(s,M). %add for negation -> works in terms of NLP but cannot interpret it=
+property(N, M) --> adjective(N, M).
+property(s, M) --> [a],noun(s, M).
+property(p, M) --> noun(p, M).
+
+
+
+
+
+% querstions
+question((Q1,Q2)) --> [are,some],noun(p,X=>Q1),property(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),intransitive_verb(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),transitive_verb(p,X=>C=>Q2), direct_object(_,_=>C).
+question(Q) --> [is], subject(s, X), property(s, X=>Q).
+question(Q) --> [are], subject(p, X=>S), property(p, X=>P), {Q=[(P:-S)]}.
+question(Q) --> [who], nominal_verb(N), property(N, _=>Q).
+
+question(Q) --> [is], subject(s, X),[not], property(s, X=>P), {Q=not(P)}.
+question(Q) --> [are], subject(p, X=>S),[not], property(p, X=>P), {Q=[(not(P):-S)]}.
+question(Q) --> [who], nominal_verb(N),[not], property(N, _=>P), {Q=not(P)}.
+
+question(Q) --> [does], subject(s, X),intransitive_verb(s, X=>Q).
+question(Q) --> [do], subject(p, X=>S), intransitive_verb(p, X=>P), {Q=[(P:-S)]}.
+question(Q) --> [who], intransitive_verb(s, _=>Q).
+
+question(Q) --> [does], subject(s, X), transitive_verb(p, X=>Y=>Q), direct_object(_, _=>Y).
+question(Q) --> [do], subject(p, X=>S), transitive_verb(p, X=>Y=>P), direct_object(_, _=>Y), {Q=[(P:-S)]}.
+question(Q) --> [who], transitive_verb(s, _=>X=>Q), direct_object(_, X).
+
+
+
+% Vocabulary
 pred2gr(P,1,C/W,X=>Lit):-
 	pred(P,1,L),
 	member(C/W,L),
 	Lit=..[P,X].
 
+pred2gr(P,2,C/W,X=>Y=>Lit):- 
+    pred(P,2,L), 
+    member(C/W,L), 
+    Lit=..[P,X,Y].
+
+% Lexicon
+adjective(_,M)		--> [Adj],    {pred2gr(_P,1,a/Adj, M)}.
+noun(s,M)			--> [Noun],   {pred2gr(_P,1,n/Noun,M)}.
+noun(p,M)			--> [Noun_p], {pred2gr(_P,1,n/Noun,M),noun_s2p(Noun,Noun_p)}.
+nominal_verb(s)	--> [Verb_s], {pred2gr(_P,1,nv/Verb,_),verb_p2s(Verb,Verb_s)}.
+nominal_verb(p)	--> [Verb],   {pred2gr(_P,1,nv/Verb,_)}.
+transitive_verb(s,M)			--> [Verb_s], {pred2gr(_P,2,v/Verb,M),verb_p2s(Verb,Verb_s)}.
+transitive_verb(p,M)			--> [Verb],   {pred2gr(_P,2,v/Verb,M)}.
+intransitive_verb(s,M)		--> [Verb_s], {pred2gr(_P,1,iv/Verb,M),verb_p2s(Verb,Verb_s)}.
+intransitive_verb(p,M)		--> [Verb],   {pred2gr(_P,1,iv/Verb,M)}.
+
 noun_s2p(Noun_s,Noun_p):-
 	( Noun_s=woman -> Noun_p=women
 	; Noun_s=man -> Noun_p=men
+    ; Noun_s=genius -> Noun_p=geniuses
 	; atom_concat(Noun_s,s,Noun_p)
 	).
 
 verb_p2s(Verb_p,Verb_s):-
-	( Verb_p=fly -> Verb_s=flies
+	( Verb_p=are -> Verb_s=is
+    ;Verb_p=fly -> Verb_s=flies
 	; 	atom_concat(Verb_p,s,Verb_s)
 	).
 
+pred(human,   1,[a/human,n/human]).
+pred(mortal,  1,[a/mortal,n/mortal]).
+pred(big,    1,[a/big]).
+pred(fly,    1,[iv/fly]).
+pred(bird,   1,[n/bird]).
+pred(is,     1,[nv/are]).
+pred(dog,    1,[n/dog]).
+pred(animal, 1,[n/animal]).
+pred(good,  1,[a/good]).
+pred(genius,  1,[a/genius,n/genius]).
+pred(win,  2,[v/win]).
+pred(own,    2,[v/own]).
+pred(prize,  1,[n/prize]).
 
-%%% sentences %%%
+pred(happy,  1,[a/happy,n/happy]).
+pred(teacher,  1,[a/teacher,n/teacher]).
 
-sentence(C) --> sword,sentence1(C).
 
-sword --> [].
-sword --> [that]. 
 
-% most of this follows Simply Logical, Chapter 7
-sentence1(C) --> determiner(N,M1,M2,C),noun(N,M1),verb_phrase(N,M2).
-sentence1([(L:-true)]) --> proper_noun(N,X),verb_phrase(N,X=>L).
-
-verb_phrase(s,M) --> [is],property(s,M).
-verb_phrase(p,M) --> [are],property(p,M).
-verb_phrase(N,M) --> iverb(N,M).
-
-property(N,M) --> adjective(N,M).
-property(s,M) --> [a],noun(s,M).
-property(p,M) --> noun(p,M).
-
-determiner(s,X=>B,X=>H,[(H:-B)]) --> [every].
-determiner(p,X=>B,X=>H,[(H:-B)]) --> [all].
-%determiner(p,X=>B,X=>H,[(H:-B)]) --> [].
-%determiner(p, sk=>H1, sk=>H2, [(H1:-true),(H2 :- true)]) -->[some].
-
-proper_noun(s,tweety) --> [tweety].
+%proper names
 proper_noun(s,peter) --> [peter].
-
-
-%%% questions %%%
-
-question(Q) --> qword,question1(Q).
-
-qword --> [].
-%qword --> [if]. 
-%qword --> [whether]. 
-
-question1(Q) --> [who],verb_phrase(s,_X=>Q).
-question1(Q) --> [is], proper_noun(N,X),property(N,X=>Q).
-question1(Q) --> [does],proper_noun(_,X),verb_phrase(_,X=>Q).
-%question1((Q1,Q2)) --> [are,some],noun(p,sk=>Q1),
-%					  property(p,sk=>Q2).
+proper_noun(s, donald) --> [donald]. %add for negation
+proper_noun(s, alice) --> [alice].
+proper_noun(s, bob) --> [bob].
+% Articles
+article(_) --> [the].
+% Determiners
+determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
+determiner(s, X=>S, X=>P, [(P:-S)]) --> [every].
+determiner(p, X=>S, X=>P, [(P:-S)]) --> [all].
+determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
+determiner(s, X=>S,X=>C=>P,C, [(P:-S)]) --> [every].
+determiner(p, X=>S, X=>C=>P,C, [(P:-S)]) --> [all].
 
 
 %%% commands %%%
@@ -104,7 +145,7 @@ command(g(retractall(prolexa:stored_rule(_,C)),"I erased it from my memory")) --
 command(g(retractall(prolexa:stored_rule(_,_)),"I am a blank slate")) --> forgetall. 
 command(g(all_rules(Answer),Answer)) --> kbdump. 
 command(g(all_answers(PN,Answer),Answer)) --> tellmeabout,proper_noun(s,PN).
-command(g(explain_question(Q,_,Answer),Answer)) --> [explain,why],sentence1([(Q:-true)]).
+command(g(explain_question(Q,_,Answer),Answer)) --> [explain,why],sentence([(Q:-true)]).
 command(g(random_fact(Fact),Fact)) --> getanewfact.
 %command(g(pf(A),A)) --> peterflach. 
 %command(g(iai(A),A)) --> what. 
@@ -150,32 +191,3 @@ rr(A):-random_member(A,["no worries","the pleasure is entirely mine","any time, 
 
 random_fact(X):-
 	random_member(X,["walruses can weigh up to 1900 kilograms", "There are two species of walrus - Pacific and Atlantic", "Walruses eat molluscs", "Walruses live in herds","Walruses have two large tusks"]).
-
-
-%%% various stuff for specfic events
-
-% today --> [what,today,is,about].
-% today --> [what,is,today,about].
-% today --> [what,is,happening,today].
-% 
-% todaysspeaker --> [who,gives,'today\'s',seminar].
-% todaysspeaker --> [who,gives,it].
-% todaysspeaker --> [who,is,the,speaker].
-% 
-% peterflach --> [who,is],hepf.
-% peterflach --> [tell,me,more,about],hepf.
-% 
-% what --> [what,is],iai.
-% what --> [tell,me,more,about],iai.
-% 
-% hepf --> [he].
-% hepf --> [peter,flach].
-% 
-% iai --> [that].
-% iai --> [interactive,'A.I.'].
-% iai --> [interactive,artificial,intelligence].
-% 
-% pf("According to Wikipedia, Pieter Adriaan Flach is a Dutch computer scientist and a Professor of Artificial Intelligence in the Department of Computer Science at the University of Bristol.").
-% 
-% iai("The Centre for Doctoral Training in Interactive Artificial Intelligence will train the next generation of innovators in human-in-the-loop AI systems, enabling them to responsibly solve societally important problems. You can ask Peter for more information.").
-% 

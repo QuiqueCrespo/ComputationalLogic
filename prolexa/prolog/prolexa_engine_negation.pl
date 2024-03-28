@@ -37,7 +37,8 @@ explain_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 	( prove_rb(Query,Rulebase,[],Proof) ->
 		maplist(pstep2message,Proof,Msg),
-		phrase(sentence1([(Query:-true)]),L),
+		phrase(sentence([(Query:-true)]),L),
+		write_debug(sentence(L)),nl,
 		atomic_list_concat([therefore|L]," ",Last),
 		append(Msg,[Last],Messages),
 		atomic_list_concat(Messages,"; ",Answer)
@@ -69,6 +70,7 @@ add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 
 %%% meta-interpreter that constructs proofs %%%
 
+% change below potentially
 % 3d argument is accumulator for proofs
 prove_rb(true,_Rulebase,P,P):-!.
 prove_rb((A,B),Rulebase,P0,P):-!,
@@ -78,6 +80,21 @@ prove_rb((A,B),Rulebase,P0,P):-!,
 prove_rb(A,Rulebase,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
 	prove_rb(B,Rulebase,[p(A,Rule)|P0],P).
+prove_rb(not B,Rulebase,P0,P):- % Added for negation
+	write_debug(B),nl,
+    find_clause((B:-A),Rule,Rulebase),
+	write_debug(A),nl,
+    prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
+
+% prove_rb(true,_Rulebase,P,P):-!.
+% prove_rb((A,B),Rulebase,P0,P):-!,
+% 	find_clause((A:-C),Rule,Rulebase),
+% 	conj_append(C,B,D),
+%     prove_rb(D,Rulebase,[p((A,B),Rule)|P0],P).
+
+% prove_rb(A,Rulebase,P0,P):-
+%     find_clause((A:-B),Rule,Rulebase),
+% 	prove_rb(B,Rulebase,[p(A,Rule)|P0],P).
 
 % top-level version that ignores proof
 prove_rb(Q,RB):-
@@ -109,7 +126,7 @@ all_rules(Answer):-
 
 % convert rule to sentence (string)
 rule2message(Rule,Message):-
-	phrase(sentence1(Rule),Sentence),
+	phrase(sentence(Rule),Sentence),
 	atomics_to_string(Sentence," ",Message).
 
 % collect everything that can be proved about a particular Proper Noun
