@@ -15,8 +15,19 @@
 prove_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 	( prove_rb(Query,Rulebase) ->
+		write_debug(clauses(Query)),
+		phrase(sentence(Query),AnswerAtomList),
+		write_debug(answerAtomList(AnswerAtomList)),
+		atomics_to_string(AnswerAtomList," ",Answer)
+	; Answer = 'Sorry, I don\'t think this is the case'
+	).	
+prove_question(Query,SessionId,Answer):-
+	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+	( prove_rb(Query,Rulebase) ->
 		transform(Query,Clauses),
+		write_debug(clauses(Clauses)),
 		phrase(sentence(Clauses),AnswerAtomList),
+		write_debug(answerAtomList(AnswerAtomList)),
 		atomics_to_string(AnswerAtomList," ",Answer)
 	; Answer = 'Sorry, I don\'t think this is the case'
 	).	
@@ -36,14 +47,16 @@ prove_question(Query,Answer):-
 explain_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 	( prove_rb(Query,Rulebase,[],Proof) ->
+		write_debug(proof(Proof)),
 		maplist(pstep2message,Proof,Msg),
-		phrase(sentence([(Query:-true)]),L),
-		write_debug(sentence(L)),nl,
+		transform(Query,Clauses),
+		phrase(sentence(Clauses),L),
 		atomic_list_concat([therefore|L]," ",Last),
 		append(Msg,[Last],Messages),
 		atomic_list_concat(Messages,"; ",Answer)
 	; Answer = 'Sorry, I don\'t think this is the case'
 	).
+
 
 % convert proof step to message
 pstep2message(p(_,Rule),Message):-
@@ -68,45 +81,52 @@ add_body_to_rulebase((A,B),Rs0,Rs):-!,
 add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 
 
-%%% meta-interpreter that constructs proofs %%%
+% %%% meta-interpreter that constructs proofs %%%
 
-% change below potentially
-% 3d argument is accumulator for proofs
+
 prove_rb(true,_Rulebase,P,P):-!.
-prove_rb((A,B),Rulebase,P0,P):-!,
-	find_clause((A:-C),Rule,Rulebase),
-	conj_append(C,B,D),
-    prove_rb(D,Rulebase,[p((A,B),Rule)|P0],P).
+
+prove_rb((A,B),Rulebase,P0,P):-
+	find_clause((A,B),Rule,Rulebase),
+	prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
+
+prove_rb((A,B),Rulebase,P0,P):-
+	find_clause((A,C),Rule,Rulebase),
+	prove_rb((C,B),Rulebase,[p((A,B),Rule)|P0],P),!.
+
+prove_rb((A,B),Rulebase,P0,P):- 
+    find_clause((B:-C),Rule,Rulebase),
+    prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
+
+prove_rb([(A:-B)],Rulebase,P0,P):-
+    find_clause((A:-B),Rule,Rulebase),
+	prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
+
 prove_rb(A,Rulebase,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
-	prove_rb(B,Rulebase,[p(A,Rule)|P0],P).
-prove_rb(not B,Rulebase,P0,P):- % Added for negation
+    prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
+
+	prove_rb(not B,Rulebase,P0,P):- % Added for negation
 	write_debug(B),nl,
     find_clause((B:-A),Rule,Rulebase),
 	write_debug(A),nl,
     prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
 
-% prove_rb(true,_Rulebase,P,P):-!.
-% prove_rb((A,B),Rulebase,P0,P):-!,
-% 	find_clause((A:-C),Rule,Rulebase),
-% 	conj_append(C,B,D),
-%     prove_rb(D,Rulebase,[p((A,B),Rule)|P0],P).
-
-% prove_rb(A,Rulebase,P0,P):-
-%     find_clause((A:-B),Rule,Rulebase),
-% 	prove_rb(B,Rulebase,[p(A,Rule)|P0],P).
-
-% top-level version that ignores proof
 prove_rb(Q,RB):-
-	prove_rb(Q,RB,[],_P).
+		prove_rb(Q,RB,[],_P).
 
 
 %%% Utilities from nl_shell.pl %%%
 
+find_clause((Clause1,Clause2),Rule,[Rule|_Rules]):-
+	copy_term(Rule,[Clause1:-true,Clause2:-true]).	% do not instantiate Rule
 find_clause(Clause,Rule,[Rule|_Rules]):-
-	copy_term(Rule,[Clause]).	% do not instantiate Rule
+	copy_term(Rule,[Clause]).
 find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
+
+	
+	
 
 % transform instantiated, possibly conjunctive, query to list of clauses
 transform((A,B),[(A:-true)|Rest]):-!,

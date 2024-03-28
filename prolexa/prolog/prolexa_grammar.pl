@@ -146,19 +146,13 @@ command(g(retractall(prolexa:stored_rule(_,_)),"I am a blank slate")) --> forget
 command(g(all_rules(Answer),Answer)) --> kbdump. 
 command(g(all_answers(PN,Answer),Answer)) --> tellmeabout,proper_noun(s,PN).
 command(g(explain_question(Q,_,Answer),Answer)) --> [explain,why],sentence([(Q:-true)]).
+command(g(explain_question((Q,P),_,Answer),Answer)) --> [explain,why],sentence([(Q:-true),(P:-true)]).
 command(g(random_fact(Fact),Fact)) --> getanewfact.
-%command(g(pf(A),A)) --> peterflach. 
-%command(g(iai(A),A)) --> what. 
+
 command(g(rr(A),A)) --> thanks.
 
-% The special form
-%	command(g(true,<response>)) --> <sentence>. 
-% maps specific input sentences to specific responses.
 
 command(g(true,"I can do a little bit of logical reasoning. You can talk with me about humans and birds.")) --> [what,can,you,do,for,me,minerva]. 
-%command(g(true,"Your middle name is Adriaan")) --> [what,is,my,middle,name]. 
-%command(g(true,"Today you can find out about postgraduate study at the University of Bristol. This presentation is about the Centre for Doctoral Training in Interactive Artificial Intelligence")) --> today. 
-%command(g(true,"The presenter is the Centre Director, Professor Peter Flach")) --> todaysspeaker. 
 
 thanks --> [thank,you].
 thanks --> [thanks].
