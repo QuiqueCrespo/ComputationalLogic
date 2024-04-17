@@ -11,7 +11,7 @@
 :- use_module(library(http/json)).
 
 :- consult(prolexa_engine).		% meta-interpreter
- :- consult(prolexa_grammar).	% NLP grammar
+:- consult(prolexa_grammar).	% NLP grammar
 
 :- dynamic stored_rule/2.	% to record additions to Rulebase in a session
 
@@ -24,6 +24,8 @@ stored_rule(1,[(human(peter):-true)]).
 stored_rule(1,[(animal(ex):-true), (bird(ex):-true)]).
 stored_rule(1,[(fly(A):-bird(A))]).
 stored_rule(1, [(human(donald):-true)]).
+stored_rule(1, [(genius(peter):-true)]).
+stored_rule(1, [(win(A,prize(_)):-genius(A))]).
 
 
 

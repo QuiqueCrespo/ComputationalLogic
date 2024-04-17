@@ -15,12 +15,12 @@
 prove_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 	( prove_rb(Query,Rulebase) ->
-		write_debug(clauses(Query)),
 		phrase(sentence(Query),AnswerAtomList),
 		write_debug(answerAtomList(AnswerAtomList)),
 		atomics_to_string(AnswerAtomList," ",Answer)
 	; Answer = 'Sorry, I don\'t think this is the case'
 	).	
+
 prove_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 	( prove_rb(Query,Rulebase) ->
@@ -58,6 +58,7 @@ explain_question(Query,SessionId,Answer):-
 	).
 
 
+
 % convert proof step to message
 pstep2message(p(_,Rule),Message):-
 	rule2message(Rule,Message).
@@ -87,6 +88,10 @@ add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 prove_rb(true,_Rulebase,P,P):-!.
 
 prove_rb((A,B),Rulebase,P0,P):-
+	prove_rb(B,Rulebase,P0,P1),
+	prove_rb(A,Rulebase,P1,P),!.
+
+prove_rb((A,B),Rulebase,P0,P):-
 	find_clause((A,B),Rule,Rulebase),
 	prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
 
@@ -106,7 +111,7 @@ prove_rb(A,Rulebase,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
     prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
 
-	prove_rb(not B,Rulebase,P0,P):- % Added for negation
+prove_rb(not B,Rulebase,P0,P):- % Added for negation
 	write_debug(B),nl,
     find_clause((B:-A),Rule,Rulebase),
 	write_debug(A),nl,
@@ -120,17 +125,20 @@ prove_rb(Q,RB):-
 
 find_clause((Clause1,Clause2),Rule,[Rule|_Rules]):-
 	copy_term(Rule,[Clause1:-true,Clause2:-true]).	% do not instantiate Rule
+
 find_clause(Clause,Rule,[Rule|_Rules]):-
 	copy_term(Rule,[Clause]).
+
 find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
 
-	
-	
+
+
 
 % transform instantiated, possibly conjunctive, query to list of clauses
 transform((A,B),[(A:-true)|Rest]):-!,
     transform(B,Rest).
+
 transform(A,[(A:-true)]).
 
 
@@ -157,5 +165,7 @@ all_answers(PN,Answer):-
 	( Messages=[] -> atomic_list_concat(['I know nothing about',PN],' ',Answer)
 	; otherwise -> atomic_list_concat(Messages,". ",Answer)
 	).
+
+
 
 

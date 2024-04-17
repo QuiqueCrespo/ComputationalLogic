@@ -10,7 +10,7 @@ sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
 sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
 sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
 sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
-sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
+
 
 sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
 %sentence(Q) --> determiner(N,S,P,C,Q),noun(N,S),predicate(N,not(P)).
@@ -119,13 +119,14 @@ proper_noun(s,peter) --> [peter].
 proper_noun(s, donald) --> [donald]. %add for negation
 proper_noun(s, alice) --> [alice].
 proper_noun(s, bob) --> [bob].
+proper_noun(s, ex) --> [ex].
 % Articles
 article(_) --> [the].
 % Determiners
-determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
+determiner(p, _ex=>H1, _ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
 determiner(s, X=>S, X=>P, [(P:-S)]) --> [every].
 determiner(p, X=>S, X=>P, [(P:-S)]) --> [all].
-determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
+determiner(p, _ex=>H1, _ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
 determiner(s, X=>S,X=>C=>P,C, [(P:-S)]) --> [every].
 determiner(p, X=>S, X=>C=>P,C, [(P:-S)]) --> [all].
 
