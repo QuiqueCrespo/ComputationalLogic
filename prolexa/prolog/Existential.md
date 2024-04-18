@@ -13,11 +13,11 @@ We first have to define the syntactic and grammatical structure of the sentences
 - Intransitive predicate: - Singular: Alice flys => fly(alice):-true. - Plural: birds fly => fly(A):-bird(A)
   By incorporating the ability to distinguish between general and particular statements the prolexa can learn and apply general rules.
 
-  > % Grammar
-  > sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
-  > sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
-  > sentence(Q) --> subject(s,S), transitive*verb(s,S=>C=>P), direct_object(*,_=>C), {Q=[(P:-true)]}.
-  > sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,\_=>C), {Q=[(P:-S)]}.
+> % Grammar
+> sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
+> sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
+> sentence(Q) --> subject(s,S), transitive*verb(s,S=>C=>P), direct_object(*,_=>C), {Q=[(P:-true)]}.
+> sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,\_=>C), {Q=[(P:-S)]}.
 
 
 ### Existential quantification
