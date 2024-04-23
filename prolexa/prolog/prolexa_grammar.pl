@@ -1,5 +1,5 @@
 :-op(600,xfy,'=>').
-:-op(900,fy, not).
+
 utterance(C) --> sentence(C).
 utterance(C) --> question(C).
 utterance(C) --> command(C).
