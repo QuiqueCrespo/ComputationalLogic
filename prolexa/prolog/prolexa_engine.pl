@@ -113,7 +113,7 @@ prove_rb(A,Rulebase,P0,P):-
 
 prove_rb(not B,Rulebase,P0,P):- % Added for negation
 	write_debug(B),nl,
-    find_clause((B:-A),Rule,Rulebase),
+    find_clause((A:-B),Rule,Rulebase),
 	write_debug(A),nl,
     prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
 

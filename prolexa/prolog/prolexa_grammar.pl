@@ -1,17 +1,16 @@
 :-op(600,xfy,'=>').
+:-op(900,fy, not).
 utterance(C) --> sentence(C).
 utterance(C) --> question(C).
 utterance(C) --> command(C).
 % Grammar
-
+sentence(Q) --> [everyone], adjective(s,X=>S), predicate(s,X=>P), {Q=[(P:-S)]}.
 sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
 sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
 sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
 sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
 sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
 sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
-
-
 sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
 %sentence(Q) --> determiner(N,S,P,C,Q),noun(N,S),predicate(N,not(P)).
 
@@ -109,8 +108,8 @@ pred(win,  2,[v/win]).
 pred(own,    2,[v/own]).
 pred(prize,  1,[n/prize]).
 
-pred(happy,  1,[a/happy,n/happy]).
-pred(teacher,  1,[a/teacher,n/teacher]).
+pred(happy,  1,[a/happy]).
+pred(teacher,  1,[n/teacher]).
 
 
 
@@ -127,7 +126,8 @@ determiner(p, _ex=>H1, _ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
 determiner(s, X=>S, X=>P, [(P:-S)]) --> [every].
 determiner(p, X=>S, X=>P, [(P:-S)]) --> [all].
 determiner(p, _ex=>H1, _ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
-determiner(s, X=>S,X=>C=>P,C, [(P:-S)]) --> [every].
+% determiner(s, X=>S, X=>C=>P,C, [(P:-S)]) --> [everyone].
+determiner(s, X=>S, X=>C=>P,C, [(P:-S)]) --> [every].
 determiner(p, X=>S, X=>C=>P,C, [(P:-S)]) --> [all].
 
 
