@@ -5,10 +5,10 @@
 		mk_prolexa_intents/0	% dump all possible Alexa intents in prolexa_intents.json
 	]).
 
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(http/http_json)).
-:- use_module(library(http/http_open)).
-:- use_module(library(http/json)).
+% :- use_module(library(http/http_dispatch)).
+% :- use_module(library(http/http_json)).
+% :- use_module(library(http/http_open)).
+% :- use_module(library(http/json)).
 
 :- consult(prolexa_engine).		% meta-interpreter
 :- consult(prolexa_grammar).	% NLP grammar
@@ -32,9 +32,9 @@ stored_rule(1, [(win(A,prize(_)):-genius(A))]).
 %add stored rules for the negation
 stored_rule(1, [(teacher(X):-happy(X))]).
 %stored_rule(1, [(happy(X):-teacher(X))]).
-
-stored_rule(1,[(teacher(peter):-true)]).
 stored_rule(1,[(happy(peter):-true)]).
+% stored_rule(1,[(teacher(peter):-true)]).
+% stored_rule(1,[(happy(peter):-true)]).
 stored_rule(1, [(not(teacher(donald)):-true)]).
 
 %%% Prolexa Command Line Interface %%%
