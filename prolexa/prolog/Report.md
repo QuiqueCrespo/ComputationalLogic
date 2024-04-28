@@ -1,4 +1,4 @@
-# Existential quantifier 
+# Existential quantifier
 
 ## Grammar
 
@@ -26,10 +26,12 @@ sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>
 ### Existential quantification
 
 We must introduce the ability to interpret the existential determiner some. We simply add the following:
+
 ```
 sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
 sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
 ```
+
 And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates in order to include the direct object meaning into the logical interpretation of the sentence.
 
 ```
@@ -39,7 +41,9 @@ determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
 determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
 
 ```
-In this case Prolog interprets this sentences as: 
+
+In this case Prolog interprets this sentences as:
+
 - Some humans are geniuses => (human(ex):-true, genius(ex):-true)
 - Some humans win prizes => (human(ex):-true, win(prize,ex):-true)
 
@@ -64,17 +68,23 @@ geniuses win prizes.
 birds fly.
 some animals are birds.
 ```
+
 The program should be able to answer the queries:
+
 ```
 "do some humans win prizes".
 "do some animals fly".
 ```
+
 Additionally, when an explanation is required for this need to be answers:
+
 ```
 "peter is human; peter is genius; therefore some humans are genius"
 "some animals are birds; birds fly; therefore some animals fly"
 ```
+
 In order to archive this we have to edit the meta-interpreter:
+
 ```
 prove_rb((A,B),Rulebase,P0,P):-
 prove_rb(B,Rulebase,P0,P1),
@@ -101,23 +111,63 @@ find_clause((A:-B),Rule,Rulebase),
 prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
 ```
 
-### Limitations
+## Test
 
-While this programs has passed all our test we believe the meta-interpreter can be written in a more elegant and robust way, unifying both cases.
+Given the following knowledge base:
 
+```
+some animals are birds.
+birds fly.
+
+peter is human.
+peter is happy.
+peter is genius.
+geniuses win prizes.
+```
+
+This querys where tested
+
+```
+prolexa> "Explain why some animals fly".
+*** utterance(Explain why some animals fly)
+*** goal(explain_question((animal(_26630),fly(_26630)),_26586,_26372))
+*** proof([p((animal(ex),bird(ex)),[(animal(ex):-true),(bird(ex):-true)]),p((animal(ex),fly(ex)),[(fly(_26936):-bird(_26936))])])
+*** answer(some animals are birds; birds fly; therefore some animals fly)
+some animals are birds; birds fly; therefore some animals fly
+
+
+prolexa> "Explain why some humans are happy".
+*** utterance(explain why some humans are happy)
+*** goal(explain_question((human(_29730),happy(_29730)),_29686,_29446))
+*** proof([p(human(peter),[(human(peter):-true)]),p(happy(peter),[(happy(peter):-true)])])
+*** answer(peter is human; peter is happy; therefore some humans are happy)
+peter is human; peter is happy; therefore some humans are happy
+
+prolexa> "Explain why some humans win prizes".
+*** utterance(explain why some humans win prizes)
+*** goal(explain_question((human(_31610),win(_31610,prize(_31740))),_31564,_31324))
+*** proof([p(human(peter),[(human(peter):-true)]),p(genius(peter),[(genius(peter):-true)]),p(win(peter,prize(_31740)),[(win(_31918,prize(_31924)):-genius(_31918))])])
+*** answer(peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes)
+peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes
+```
+
+We can therefore see the program works with the two types of existential reasoning mentioned above.
 
 # Negation
 
 To implement negation changes had to made to the following files: 1-prolexa.pl 2-prolexa_engine.pl 3-prolexa grammar. This section will detail and explain the changes required and document the testing done to evaluate the performance of the implementation. The negation was developed and tested in the context of happiness and teaching. In summary, we succeeded at enabling prolexa handle negation.
 
 ## Prolexa.pl - Rules
+
 The changes to prolexa.pl included the changes in the rules which are defined below
+
 ```
 stored_rule(1, [(teacher(X):-happy(X))]).
 stored_rule(1,[(happy(peter):-true)]).
 stored_rule(1, [(not(teacher(donald)):-true)]).
 ```
-The first rules are based on prolog's syntax A:-B translating into if B is true then A is true. Therefore, the first rule implies that if you are happy then you are a teacher, the second rule implies that peter is happy and the third rule implies that donald is not a teacher. 
+
+The first rules are based on prolog's syntax A:-B translating into if B is true then A is true. Therefore, the first rule implies that if you are happy then you are a teacher, the second rule implies that peter is happy and the third rule implies that donald is not a teacher.
 
 ## prolexa_grammar.pl - Grammar
 
@@ -127,23 +177,26 @@ The change in grammar was required to add the following features to prolexa: 1- 
 pred(happy,  1,[a/happy]).
 pred(teacher,  1,[n/teacher]).
 ```
-The above defines happy as an adjective and teacher as a noun, both required for the handling of the new example. 
+
+The above defines happy as an adjective and teacher as a noun, both required for the handling of the new example.
 
 ```
 proper_noun(s, donald) --> [donald]
 ```
+
 The above define donald as a singular proper noun enabling prolexa to refer to him appropriately with the correct grammar, e.g. using is, where needed
 
 ```
 sentence(Q) --> [everyone], adjective(s,X=>S), predicate(s,X=>P), {Q=[(P:-S)]}.
 ```
-The above change is required such that use "everyone" in its determiner i.e. prolexa can respond with, for example, "everyone happy is a teacher, therefore, ....".
 
+The above change is required such that use "everyone" in its determiner i.e. prolexa can respond with, for example, "everyone happy is a teacher, therefore, ....".
 
 ```
 nominal_predicate(N,not(M)) --> nominal_verb(N),[not],property(s,M).
 ```
-The above is a modification of the definition of the nominal_predicate provided in the already developed prolexa code. The only different is that it allow a negation to be present following a nominal verb and before a property e.g. it can handle "is not happy" compared to the default only able to handle "is happy". 
+
+The above is a modification of the definition of the nominal_predicate provided in the already developed prolexa code. The only different is that it allow a negation to be present following a nominal verb and before a property e.g. it can handle "is not happy" compared to the default only able to handle "is happy".
 
 ```
 sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
@@ -151,7 +204,8 @@ question(Q) --> [is], subject(s, X),[not], property(s, X=>P), {Q=not(P)}.
 question(Q) --> [are], subject(p, X=>S),[not], property(p, X=>P), {Q=[(not(P):-S)]}.
 question(Q) --> [who], nominal_verb(N),[not], property(N, _=>P), {Q=not(P)}.
 ```
-The above four definitions allow prolexa to handle questions with "not" in it. 
+
+The above four definitions allow prolexa to handle questions with "not" in it.
 
 ## prolexa_engine.pl - rule base proving
 
@@ -163,12 +217,11 @@ prove_rb(not B,Rulebase,P0,P):- % Added for negation
     prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
 ```
 
-The above searches the rule based such that not B implies A such that prolexa can navigate the defined rules and predicates that matches A:-¬B i.e. if not B then A. The process is done recursively until all the conditions are satisfied and prove is derived or until all options are explored. The write_debug is not required and was only used by us for testing and debugging. 
-
+The above searches the rule based such that not B implies A such that prolexa can navigate the defined rules and predicates that matches A:-¬B i.e. if not B then A. The process is done recursively until all the conditions are satisfied and prove is derived or until all options are explored. The write_debug is not required and was only used by us for testing and debugging.
 
 ## Testing
 
-The testing will document the outputs as they are from the interactive prolexa terminal. 
+The testing will document the outputs as they are from the interactive prolexa terminal.
 
 ```
 Welcome to SWI-Prolog (threaded, 64 bits, version 8.4.2)
@@ -184,13 +237,13 @@ prolexa> "Tell me everything you know".
 *** goal(all_rules(_2706))
 *** answer(everyone human is mortal. peter is human. some animals are birds. birds fly. donald is human. peter is genius. geniuses win prizes. everyone happy is a teacher. peter is happy. donald is not a teacher)
 everyone human is mortal. peter is human. some animals are birds. birds fly. donald is human. peter is genius. geniuses win prizes. everyone happy is a teacher. peter is happy. donald is not a teacher
-prolexa> "explain why peter is a teacher". 
+prolexa> "explain why peter is a teacher".
 *** utterance(explain why peter is a teacher)
 *** goal(explain_question(teacher(peter),_8328,_8084))
 *** proof([p(happy(peter),[(happy(peter):-true)]),p(teacher(peter),[(teacher(_8562):-happy(_8562))])])
 *** answer(peter is happy; everyone happy is a teacher; therefore peter is a teacher)
 peter is happy; everyone happy is a teacher; therefore peter is a teacher
-prolexa> "explain why donald is not happy". 
+prolexa> "explain why donald is not happy".
 *** utterance(explain why donald is not happy)
 *** goal(explain_question(not(happy(donald)),_9690,_9450))
 *** happy(donald)
@@ -202,4 +255,4 @@ prolexa> "explain why donald is not happy".
 donald is not a teacher; everyone happy is a teacher; therefore donald is not happy
 ```
 
-The above testing shows that prolexa can now handle the rule teacher(X):-happy(X) as well as explain the negation of this rule. 
+The above testing shows that prolexa can now handle the rule teacher(X):-happy(X) as well as explain the negation of this rule.
