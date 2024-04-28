@@ -16,19 +16,19 @@ We first have to define the syntactic and grammatical structure of the sentences
   By incorporating the ability to distinguish between general and particular statements the prolexa can learn and apply general rules.
 
 ```
-> % Grammar
-> sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
-> sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
-> sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
-> sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
+% Grammar
+sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
+sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
 ```
 
 ### Existential quantification
 
 We must introduce the ability to interpret the existential determiner some. We simply add the following:
 ```
-> sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
-> sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
+sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
+sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
 ```
 And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates in order to include the direct object meaning into the logical interpretation of the sentence.
 
