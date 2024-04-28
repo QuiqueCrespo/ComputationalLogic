@@ -31,22 +31,26 @@ We must introduce the ability to interpret the existential determiner some. We s
 > sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
 ```
 And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates in order to include the direct object meaning into the logical interpretation of the sentence.
+
 ```
-> % Determiners intransitive and nominal
-> determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
-> % Determiners transitive
-> determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
+% Determiners intransitive and nominal
+determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
+% Determiners transitive
+determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
+
 ```
-In this case Prolog interprets this sentences as: - Some humans are geniuses => (human(ex):-true, genius(ex):-true) - Some humans win prizes => (human(ex):-true, win(prize,ex):-true)
+In this case Prolog interprets this sentences as: 
+- Some humans are geniuses => (human(ex):-true, genius(ex):-true)
+- Some humans win prizes => (human(ex):-true, win(prize,ex):-true)
 
 The reason for such a definition for the _some_ determinant is to introduce into the knowledge base at least one example of an atom that has both properties, in our case we call this atom _ex_.
 To finalise the syntactical definitions we need to define the structure of the questions to allow us to query the knowledge base. Following the same logic we defined the following questions:
 
 ```
-> % questions
-> question((Q1,Q2)) --> [are,some],noun(p,X=>Q1),property(p,X=>Q2).
-> question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),intransitive_verb(p,X=>Q2).
-> question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),transitive_verb(p,X=>C=>Q2), direct_object(_,_=>C).
+% questions
+question((Q1,Q2)) --> [are,some],noun(p,X=>Q1),property(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),intransitive_verb(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),transitive_verb(p,X=>C=>Q2), direct_object(_,_=>C).
 ```
 
 ## Meta-interpreter
@@ -54,47 +58,47 @@ To finalise the syntactical definitions we need to define the structure of the q
 We have enabled Prolexa to interpret existential quantifiers, now we have to write the logic to enable it to answer queries about them. Given the following knowledge base:
 
 ```
-> peter is human.
-> peter is genius.
-> geniuses win prizes.
-> birds fly.
-> some animals are birds.
+peter is human.
+peter is genius.
+geniuses win prizes.
+birds fly.
+some animals are birds.
 ```
 The program should be able to answer the queries:
 ```
-> "do some humans win prizes".
-> "do some animals fly".
+"do some humans win prizes".
+"do some animals fly".
 ```
 Additionally, when an explanation is required for this need to be answers:
 ```
-> "peter is human; peter is genius; therefore some humans are genius"
-> "some animals are birds; birds fly; therefore some animals fly"
+"peter is human; peter is genius; therefore some humans are genius"
+"some animals are birds; birds fly; therefore some animals fly"
 ```
 In order to archive this we have to edit the meta-interpreter:
 ```
-> prove_rb((A,B),Rulebase,P0,P):-
-> prove_rb(B,Rulebase,P0,P1),
-> prove_rb(A,Rulebase,P1,P),!.
+prove_rb((A,B),Rulebase,P0,P):-
+prove_rb(B,Rulebase,P0,P1),
+prove_rb(A,Rulebase,P1,P),!.
 
-> prove_rb((A,B),Rulebase,P0,P):-
-> find_clause((A,B),Rule,Rulebase),
-> prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
+prove_rb((A,B),Rulebase,P0,P):-
+find_clause((A,B),Rule,Rulebase),
+prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
 
-> prove_rb((A,B),Rulebase,P0,P):-
-> find_clause((A,C),Rule,Rulebase),
-> prove_rb((C,B),Rulebase,[p((A,B),Rule)|P0],P),!.
+prove_rb((A,B),Rulebase,P0,P):-
+find_clause((A,C),Rule,Rulebase),
+prove_rb((C,B),Rulebase,[p((A,B),Rule)|P0],P),!.
 
-> prove_rb((A,B),Rulebase,P0,P):-
-> find_clause((B:-C),Rule,Rulebase),
-> prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
+prove_rb((A,B),Rulebase,P0,P):-
+find_clause((B:-C),Rule,Rulebase),
+prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
 
-> prove_rb([(A:-B)],Rulebase,P0,P):-
-> find_clause((A:-B),Rule,Rulebase),
-> prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
+prove_rb([(A:-B)],Rulebase,P0,P):-
+find_clause((A:-B),Rule,Rulebase),
+prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
 
-> prove_rb(A,Rulebase,P0,P):-
-> find_clause((A:-B),Rule,Rulebase),
-> prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
+prove_rb(A,Rulebase,P0,P):-
+find_clause((A:-B),Rule,Rulebase),
+prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
 ```
 
 ### Limitations
