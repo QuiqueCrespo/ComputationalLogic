@@ -1,10 +1,9 @@
-# Existential quantifier
+# Report 
+Authors: Enrique Crespo and Omar Emara
 
 ## Grammar
 
-### Transitive predicates
-
-We first have to define the syntactic and grammatical structure of the sentences. For this part we have defined sentences with transitive, intransitive and nominal predicates. The program handles sentences in this way:
+We first have to define the syntactic and grammatical structure of the sentences, since they are the contact point between the user and prolexa. In order to enable the interaction to be meaningful we must define the main types of sentences and their respective logical representations. Therefore, we have defined sentences with transitive, intransitive and nominal predicates and their corresponding logical representations, as follows:
 
 - Nominal predicates:
   - Singular: Toby is a dog => dog(toby):-true.
@@ -13,19 +12,26 @@ We first have to define the syntactic and grammatical structure of the sentences
   - Singular: Alice owns Toby => own(alice,toby):-true
   - Plural: Geniuses win prizes => win(prize,A) :- genius(A).
 - Intransitive predicate: - Singular: Alice flys => fly(alice):-true. - Plural: birds fly => fly(A):-bird(A)
-  By incorporating the ability to distinguish between general and particular statements the prolexa can learn and apply general rules.
+
+By incorporating the ability to distinguish between general and particular statements the prolexa can learn and apply general rules.
 
 ```
 % Grammar
 sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
 sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
+
 sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
 sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
+
+predicate(N,M)  --> nominal_predicate(N,M).
+predicate(N,M)   --> intransitive_verb(N,M).
 ```
 
 ### Existential quantification
 
-We must introduce the ability to interpret the existential determiner some. We simply add the following:
+Once the grammar is ready and prolexa is able to process the desired type of sentences, we are able to implement new reasoning features. In this part we will show how we have include the ability to interpret existential quatification. This is the ablility to undertand statemens such as: some humans are geniuses. And if the program also knows that "geniuses win prizes", then it should be able to infer that some humans win prizes.
+
+In order to archive this, first need to implement the existential determiner "some". To this end we need to equip prolexa with the ability to interpret sentences with determiners:
 
 ```
 sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
@@ -45,7 +51,7 @@ determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
 In this case Prolog interprets this sentences as:
 
 - Some humans are geniuses => (human(ex):-true, genius(ex):-true)
-- Some humans win prizes => (human(ex):-true, win(prize,ex):-true)
+- Some humans win prizes => (human(ex):-true, win(prize(_),ex):-true)
 
 The reason for such a definition for the _some_ determinant is to introduce into the knowledge base at least one example of an atom that has both properties, in our case we call this atom _ex_.
 To finalise the syntactical definitions we need to define the structure of the questions to allow us to query the knowledge base. Following the same logic we defined the following questions:
@@ -62,8 +68,7 @@ question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),transitive_verb(p,X=>C=>Q2), direc
 We have enabled Prolexa to interpret existential quantifiers, now we have to write the logic to enable it to answer queries about them. Given the following knowledge base:
 
 ```
-peter is human.
-peter is genius.
+some humans are geniuses.
 geniuses win prizes.
 birds fly.
 some animals are birds.
@@ -79,36 +84,39 @@ The program should be able to answer the queries:
 Additionally, when an explanation is required for this need to be answers:
 
 ```
-"peter is human; peter is genius; therefore some humans are genius"
+"some humans are genius; geniuses win prizes; therefore some humans are genius"
 "some animals are birds; birds fly; therefore some animals fly"
 ```
 
 In order to archive this we have to edit the meta-interpreter:
 
 ```
-prove_rb((A,B),Rulebase,P0,P):-
-prove_rb(B,Rulebase,P0,P1),
-prove_rb(A,Rulebase,P1,P),!.
 
-prove_rb((A,B),Rulebase,P0,P):-
-find_clause((A,B),Rule,Rulebase),
-prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
+% base case
+prove_rb(true,_Rulebase,P,P):-!.
 
+% conjunction
 prove_rb((A,B),Rulebase,P0,P):-
-find_clause((A,C),Rule,Rulebase),
-prove_rb((C,B),Rulebase,[p((A,B),Rule)|P0],P),!.
+	prove_rb(B,Rulebase,P0,P1),
+	prove_rb(A,Rulebase,P1,P),!.
 
-prove_rb((A,B),Rulebase,P0,P):-
-find_clause((B:-C),Rule,Rulebase),
-prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
-
+% direct proof
 prove_rb([(A:-B)],Rulebase,P0,P):-
-find_clause((A:-B),Rule,Rulebase),
-prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
+	find_clause((A:-B),Rule,Rulebase),
+	prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
+
+prove_rb((A,B),Rulebase,P0,P):-
+	find_clause((A,B),Rule,Rulebase),
+	prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
+
+% inference
+prove_rb((A,B),Rulebase,P0,P):- 
+    find_clause((B:-C),Rule,Rulebase),
+    prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
 
 prove_rb(A,Rulebase,P0,P):-
-find_clause((A:-B),Rule,Rulebase),
-prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
+    find_clause((A:-B),Rule,Rulebase),
+    prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
 ```
 
 ## Test
@@ -151,7 +159,7 @@ prolexa> "Explain why some humans win prizes".
 peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes
 ```
 
-We can therefore see the program works with the two types of existential reasoning mentioned above.
+We can therefore see the program is able to perform existential reasoning.
 
 # Negation
 
