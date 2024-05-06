@@ -84,28 +84,27 @@ add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 
 % %%% meta-interpreter that constructs proofs %%%
 
-
+% base case
 prove_rb(true,_Rulebase,P,P):-!.
 
+% conjunction
 prove_rb((A,B),Rulebase,P0,P):-
 	prove_rb(B,Rulebase,P0,P1),
 	prove_rb(A,Rulebase,P1,P),!.
+
+% direct proof
+prove_rb([(A:-B)],Rulebase,P0,P):-
+	find_clause((A:-B),Rule,Rulebase),
+	prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
 
 prove_rb((A,B),Rulebase,P0,P):-
 	find_clause((A,B),Rule,Rulebase),
 	prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
 
-prove_rb((A,B),Rulebase,P0,P):-
-	find_clause((A,C),Rule,Rulebase),
-	prove_rb((C,B),Rulebase,[p((A,B),Rule)|P0],P),!.
-
+% inference
 prove_rb((A,B),Rulebase,P0,P):- 
     find_clause((B:-C),Rule,Rulebase),
     prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
-
-prove_rb([(A:-B)],Rulebase,P0,P):-
-    find_clause((A:-B),Rule,Rulebase),
-	prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
 
 prove_rb(A,Rulebase,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
