@@ -218,11 +218,11 @@ The above four definitions are extension of the definitions provided in prolexa'
 ## prolexa_engine.pl - rule base proving
 
 ```
-prove_rb(not B,Rulebase,P0,P):- % Added for negation
+prove_rb(not(B),Rulebase,P0,P):- % Added for negation
 	write_debug(B),nl,
     find_clause((A:-B),Rule,Rulebase),
 	write_debug(A),nl,
-    prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
+    prove_rb(not(A),Rulebase,[p(not(B),Rule)|P0],P).
 ```
 
 The above enables handling negation while proving. It uses a clause of what is being negated i.e. not B e.g. "not happy" in donalds example and then tries to find A:-B. The prove will look up if donald is a teacher or not in the rule base for A and proves not(teacher(donald)) which is true as per the rule base. Therefore, A:-B evaluates to true.  
