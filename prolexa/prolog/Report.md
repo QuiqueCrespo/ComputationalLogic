@@ -213,7 +213,7 @@ question(Q) --> [are], subject(p, X=>S),[not], property(p, X=>P), {Q=[(not(P):-S
 question(Q) --> [who], nominal_verb(N),[not], property(N, _=>P), {Q=not(P)}.
 ```
 
-The above four definitions allow prolexa to handle questions with "not" in it.
+The above four definitions are extension of the definitions provided in prolexa's skeleton to allow prolexa to handle questions with "not" in it.
 
 ## prolexa_engine.pl - rule base proving
 
@@ -225,7 +225,7 @@ prove_rb(not B,Rulebase,P0,P):- % Added for negation
     prove_rb(not A,Rulebase,[p(not B,Rule)|P0],P).
 ```
 
-The above searches the rule based such that not B implies A such that prolexa can navigate the defined rules and predicates that matches A:-¬B i.e. if not B then A. The process is done recursively until all the conditions are satisfied and prove is derived or until all options are explored. The write_debug is not required and was only used by us for testing and debugging.
+The above enables handling negation while proving. It uses a clause of what is being negated i.e. not B e.g. "not happy" in donalds example and then tries to find A:-B. The prove will look up if donald is a teacher or not in the rule base for A and proves not(teacher(donald)) which is true as per the rule base. Therefore, A:-B evaluates to true.  
 
 ## Testing
 
