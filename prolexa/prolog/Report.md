@@ -198,7 +198,7 @@ The above define donald as a singular proper noun enabling prolexa to refer to h
 sentence(Q) --> [everyone], adjective(s,X=>S), predicate(s,X=>P), {Q=[(P:-S)]}.
 ```
 
-The above change is required such that use "everyone" in its determiner i.e. prolexa can respond with, for example, "everyone happy is a teacher, therefore, ....".
+The above definiton of sentence is required to enable prolexa to understand sentences starting with "everyone" and enable it to produce sentence with similiar structure. The rest of the sentence definition is the same as explained above. 
 
 ```
 nominal_predicate(N,not(M)) --> nominal_verb(N),[not],property(s,M).
