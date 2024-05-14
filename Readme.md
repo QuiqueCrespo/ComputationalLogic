@@ -1,6 +1,8 @@
 # Report 
 Authors: Enrique Crespo and Omar Emara
 
+Code: https://github.com/QuiqueCrespo/ComputationalLogic
+
 ## Grammar
 
 We first have to define the syntactic and grammatical structure of the sentences, since they are the contact point between the user and prolexa. In order to enable the interaction to be meaningful we must define the main types of sentences and their respective logical representations. Therefore, we have defined sentences with transitive, intransitive and nominal predicates and their corresponding logical representations, as follows:
