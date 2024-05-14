@@ -135,7 +135,7 @@ peter is genius.
 geniuses win prizes.
 ```
 
-This querys where tested
+This querys were tested
 
 ```
 prolexa> "Explain why some animals fly".
