@@ -5,7 +5,7 @@ Code: https://github.com/QuiqueCrespo/ComputationalLogic
 
 ## Grammar
 
-We first have to define the syntactic and grammatical structure of the sentences, since they are the contact point between the user and prolexa. In order to enable the interaction to be meaningful we must define the main types of sentences and their respective logical representations. Therefore, we have defined sentences with transitive, intransitive and nominal predicates and their corresponding logical representations, as follows:
+We first have to define the syntactic and grammatical structure of the sentences, since they are the contact point between the user and prolexa. To enable the interaction to be meaningful we must define the main types of sentences and their respective logical representations. Therefore, we have defined sentences with transitive, intransitive, and nominal predicates and their corresponding logical representations, as follows:
 
 - Nominal predicates:
   - Singular: Toby is a dog => dog(toby):-true.
@@ -31,16 +31,16 @@ predicate(N,M)   --> intransitive_verb(N,M).
 
 ### Existential quantification
 
-Once the grammar is ready and prolexa is able to process the desired type of sentences, we are able to implement new reasoning features. In this part we will show how we have include the ability to interpret existential quatification. This is the ablility to undertand statemens such as: some humans are geniuses. And if the program also knows that "geniuses win prizes", then it should be able to infer that some humans win prizes.
+Once the grammar is ready and prolexa can process the desired type of sentences, we can implement new reasoning features. In this part, we will show how we have included the ability to interpret existential quantification. This is the ability to understand statements such as some humans are geniuses. And if the program also knows that "geniuses win prizes", then it should be able to infer that some humans win prizes.
 
-In order to archive this, first need to implement the existential determiner "some". To this end we need to equip prolexa with the ability to interpret sentences with determiners:
+To achieve this, first need to implement the existential determiner "some". To this end, we need to equip prolexa with the ability to interpret sentences with determiners:
 
 ```
 sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
 sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
 ```
 
-And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates in order to include the direct object meaning into the logical interpretation of the sentence.
+And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates to include the direct object meaning in the logical interpretation of the sentence.
 
 ```
 % Determiners intransitive and nominal
@@ -50,13 +50,13 @@ determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
 
 ```
 
-In this case Prolog interprets this sentences as:
+In this case, Prolog interprets these sentences as:
 
 - Some humans are geniuses => (human(ex):-true, genius(ex):-true)
 - Some humans win prizes => (human(ex):-true, win(prize(_),ex):-true)
 
 The reason for such a definition for the _some_ determinant is to introduce into the knowledge base at least one example of an atom that has both properties, in our case we call this atom _ex_.
-To finalise the syntactical definitions we need to define the structure of the questions to allow us to query the knowledge base. Following the same logic we defined the following questions:
+To finalize the syntactical definitions we need to define the structure of the questions to allow us to query the knowledge base. Following the same logic we defined the following questions:
 
 ```
 % questions
@@ -83,14 +83,14 @@ The program should be able to answer the queries:
 "do some animals fly".
 ```
 
-Additionally, when an explanation is required for this need to be answers:
+Additionally, when an explanation is required for this need to be answered:
 
 ```
-"some humans are genius; geniuses win prizes; therefore some humans are genius"
+"Some humans are genius; geniuses win prizes; therefore some humans are genius"
 "some animals are birds; birds fly; therefore some animals fly"
 ```
 
-In order to archive this we have to edit the meta-interpreter:
+To archive this we have to edit the meta-interpreter:
 
 ```
 
@@ -131,11 +131,11 @@ birds fly.
 
 peter is human.
 peter is happy.
-peter is genius.
+peter is a genius.
 geniuses win prizes.
 ```
 
-This querys were tested
+These queries were tested
 
 ```
 prolexa> "Explain why some animals fly".
@@ -161,11 +161,11 @@ prolexa> "Explain why some humans win prizes".
 peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes
 ```
 
-We can therefore see the program is able to perform existential reasoning.
+We can therefore see the program can perform existential reasoning.
 
 # Negation
 
-To implement negation changes had to made to the following files: 1-prolexa.pl 2-prolexa_engine.pl 3-prolexa grammar. This section will detail and explain the changes required and document the testing done to evaluate the performance of the implementation. The negation was developed and tested in the context of happiness and teaching. In summary, we succeeded at enabling prolexa handle negation.
+To implement negation changes had to made to the following files: 1-prolexa.pl 2-prolexa_engine.pl 3-prolexa grammar. This section will detail and explain the changes required and document the testing done to evaluate the performance of the implementation. The negation was developed and tested in the context of happiness and teaching. In summary, we succeeded at enabling prolexa to handle negation.
 
 ## Prolexa.pl - Rules
 
@@ -177,11 +177,11 @@ stored_rule(1,[(happy(peter):-true)]).
 stored_rule(1, [(not(teacher(donald)):-true)]).
 ```
 
-The first rules are based on prolog's syntax A:-B translating into if B is true then A is true. Therefore, the first rule implies that if you are happy then you are a teacher, the second rule implies that peter is happy and the third rule implies that donald is not a teacher.
+The first rules are based on the prolog's syntax A:-B translating into if B is true then A is true. Therefore, the first rule implies that if you are happy then you are a teacher, the second rule implies that peter is happy and the third rule implies that donald is not a teacher.
 
 ## prolexa_grammar.pl - Grammar
 
-The change in grammar was required to add the following features to prolexa: 1- understand negation in the question e.g. "explain why donald is not happy". 2-understand donald when being referred to in the sentence 3-respond with coherent sentences to the new required explaination. The changes can be found below:
+The change in grammar was required to add the following features to prolexa: 1- understand negation in the question e.g. "Explain why donald is not happy". 2-understand donald when being referred to in the sentence 3-respond with coherent sentences to the new required explanation. The changes can be found below:
 
 ```
 pred(happy,  1,[a/happy]).
@@ -194,19 +194,19 @@ The above defines happy as an adjective and teacher as a noun, both required for
 proper_noun(s, donald) --> [donald]
 ```
 
-The above define donald as a singular proper noun enabling prolexa to refer to him appropriately with the correct grammar, e.g. using is, where needed
+The above defines donald as a singular proper noun enabling prolexa to refer to him appropriately with the correct grammar, e.g. using is, where needed
 
 ```
 sentence(Q) --> [everyone], adjective(s,X=>S), predicate(s,X=>P), {Q=[(P:-S)]}.
 ```
 
-The above definiton of sentence is required to enable prolexa to understand sentences starting with "everyone" and enable it to produce sentence with similiar structure. The rest of the sentence definition is the same as explained above. 
+The above definition of a sentence is required to enable prolexa to understand sentences starting with "everyone" and enable it to produce a sentence with a similar structure. The rest of the sentence definition is the same as explained above. 
 
 ```
 nominal_predicate(N,not(M)) --> nominal_verb(N),[not],property(s,M).
 ```
 
-The above is a modification of the definition of the nominal_predicate provided in the already developed prolexa code. The only different is that it allow a negation to be present following a nominal verb and before a property e.g. it can handle "is not happy" compared to the default only able to handle "is happy".
+The above is a modification of the definition of the nominal_predicate provided in the already developed prolexa code. The only difference is that it allows a negation to be present following a nominal verb and before a property e.g. it can handle "is not happy" compared to the default only able to handle "is happy".
 
 ```
 sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
@@ -215,7 +215,7 @@ question(Q) --> [are], subject(p, X=>S),[not], property(p, X=>P), {Q=[(not(P):-S
 question(Q) --> [who], nominal_verb(N),[not], property(N, _=>P), {Q=not(P)}.
 ```
 
-The above four definitions are extension of the definitions provided in prolexa's skeleton to allow prolexa to handle questions with "not" in it.
+The above four definitions are extensions of the definitions provided in prolexa's skeleton to allow prolexa to handle questions with "not" in them.
 
 ## prolexa_engine.pl - rule base proving
 
@@ -227,7 +227,7 @@ prove_rb(not(B),Rulebase,P0,P):- % Added for negation
     prove_rb(not(A),Rulebase,[p(not(B),Rule)|P0],P).
 ```
 
-The above enables handling negation while proving. It uses a clause of what is being negated i.e. not B e.g. "not happy" in donalds example and then tries to find A:-B. The prove will look up if donald is a teacher or not in the rule base for A and proves not(teacher(donald)) which is true as per the rule base. Therefore, A:-B evaluates to true.  
+The above enables handling negation while proving. It uses a clause of what is being negated i.e. not B e.g. "not happy" in donalds example and then tries to find A:-B. The meta-interpreter will look up if donald is a teacher or not in the rule base for A and attempt to prove not(teacher(donald)) which is true as per the rule base. Therefore, A:-B evaluates to true.  
 
 ## Testing
 
