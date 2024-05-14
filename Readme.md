@@ -1,256 +1,266 @@
-[![Read Assignment Description](https://img.shields.io/badge/assignment-description-blue)](assignment.md)  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/simply-logical/ComputationalLogic/blob/prolexa-plus/Prolexa_Plus_Demo_Notebook.ipynb)
+# Report 
+Authors: Enrique Crespo and Omar Emara
 
-This repository is provided for general use and as the basis for the assignment for *Computational Logic for Artificial Intelligence* (COMSM0022). 
-CDT students taking the assignment should clone this repository. 
-The two buttons above give more details about the assignment, and enable running the Prolexa assistant in the browser using Google Colab. 
-The rest of this page provides a bit more details about what the code can do, how it can be run from the command line, and how it can be integrated with an Amazon Alexa device. 
+## Grammar
 
-# Prolexa #
-This repository contains Prolog code for a simple question-answering assistant.
-The top-level module is `prolexa/prolog/prolexa.pl`, which can either be run in
-the command line or with speech input and output through the
-[alexa developer console](https://developer.amazon.com/alexa/console/ask).
+We first have to define the syntactic and grammatical structure of the sentences, since they are the contact point between the user and prolexa. In order to enable the interaction to be meaningful we must define the main types of sentences and their respective logical representations. Therefore, we have defined sentences with transitive, intransitive and nominal predicates and their corresponding logical representations, as follows:
 
-The heavy lifting is done in `prolexa/prolog/prolexa_grammar.pl`, which defines
-DCG rules for sentences (that are added to the knowledge base if they don't
-already follow), questions (that are answered if possible), and commands (e.g.,
-explain why something follows); and `prolexa/prolog/prolexa_engine.pl`, which
-implements reasoning by means of meta-interpreters.
+- Nominal predicates:
+  - Singular: Toby is a dog => dog(toby):-true.
+  - Plural: Dogs are big => big(A):-dog(A).
+- Transitive predicate:
+  - Singular: Alice owns Toby => own(alice,toby):-true
+  - Plural: Geniuses win prizes => win(prize,A) :- genius(A).
+- Intransitive predicate: - Singular: Alice flys => fly(alice):-true. - Plural: birds fly => fly(A):-bird(A)
 
-Also included are `prolexa/prolog/nl_shell.pl`, which is taken verbatim from
-Chapter 7 of *Simply Logical*, and an extended version
-`prolexa/prolog/nl_shell2.pl`, which formed the basis for the *prolexa* code.
-
-The code has been tested with [SWI Prolog](https://www.swi-prolog.org) versions
-7.6.0, 8.0.3 and 8.2.2.
-
-## Command-line interface ##
-(The code is executed from the `prolexa/prolog` directory.)
+By incorporating the ability to distinguish between general and particular statements the prolexa can learn and apply general rules.
 
 ```
-% swipl prolexa.pl
-Welcome to SWI-Prolog (threaded, 64 bits, version 8.0.3)
+% Grammar
+sentence(Q) --> subject(s,S), predicate(s, S=>P), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), predicate(p,X=>P), {Q=[(P:-S)]}.
+
+sentence(Q) --> subject(s,S), transitive_verb(s,S=>C=>P), direct_object(_,_=>C), {Q=[(P:-true)]}.
+sentence(Q) --> subject(p,X=>S), transitive_verb(p,X=>C=>P), direct_object(_,_=>C), {Q=[(P:-S)]}.
+
+predicate(N,M)  --> nominal_predicate(N,M).
+predicate(N,M)   --> intransitive_verb(N,M).
+```
+
+### Existential quantification
+
+Once the grammar is ready and prolexa is able to process the desired type of sentences, we are able to implement new reasoning features. In this part we will show how we have include the ability to interpret existential quatification. This is the ablility to undertand statemens such as: some humans are geniuses. And if the program also knows that "geniuses win prizes", then it should be able to infer that some humans win prizes.
+
+In order to archive this, first need to implement the existential determiner "some". To this end we need to equip prolexa with the ability to interpret sentences with determiners:
+
+```
+sentence(Q) --> determiner(N,S,P,Q), subject(N,S), predicate(N,P).
+sentence(Q) --> determiner(N,S,P,C,Q), subject(N,S),transitive_verb(N,P), direct_object(_,_=>C).
+```
+
+And the definitions of those determiners, along with the logic to interpret them. Here we also must introduce the distinction between transitive and intransitive predicates in order to include the direct object meaning into the logical interpretation of the sentence.
+
+```
+% Determiners intransitive and nominal
+determiner(p, ex=>H1, ex=>H2, [(H1:-true),(H2 :- true)]) --> [some].
+% Determiners transitive
+determiner(p, ex=>H1, ex=>C=>H2,C, [(H1:-true),(H2 :- true)]) --> [some].
+
+```
+
+In this case Prolog interprets this sentences as:
+
+- Some humans are geniuses => (human(ex):-true, genius(ex):-true)
+- Some humans win prizes => (human(ex):-true, win(prize(_),ex):-true)
+
+The reason for such a definition for the _some_ determinant is to introduce into the knowledge base at least one example of an atom that has both properties, in our case we call this atom _ex_.
+To finalise the syntactical definitions we need to define the structure of the questions to allow us to query the knowledge base. Following the same logic we defined the following questions:
+
+```
+% questions
+question((Q1,Q2)) --> [are,some],noun(p,X=>Q1),property(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),intransitive_verb(p,X=>Q2).
+question((Q1,Q2)) --> [do,some],noun(p,X=>Q1),transitive_verb(p,X=>C=>Q2), direct_object(_,_=>C).
+```
+
+## Meta-interpreter
+
+We have enabled Prolexa to interpret existential quantifiers, now we have to write the logic to enable it to answer queries about them. Given the following knowledge base:
+
+```
+some humans are geniuses.
+geniuses win prizes.
+birds fly.
+some animals are birds.
+```
+
+The program should be able to answer the queries:
+
+```
+"do some humans win prizes".
+"do some animals fly".
+```
+
+Additionally, when an explanation is required for this need to be answers:
+
+```
+"some humans are genius; geniuses win prizes; therefore some humans are genius"
+"some animals are birds; birds fly; therefore some animals fly"
+```
+
+In order to archive this we have to edit the meta-interpreter:
+
+```
+
+% base case
+prove_rb(true,_Rulebase,P,P):-!.
+
+% conjunction
+prove_rb((A,B),Rulebase,P0,P):-
+	prove_rb(B,Rulebase,P0,P1),
+	prove_rb(A,Rulebase,P1,P),!.
+
+% direct proof
+prove_rb([(A:-B)],Rulebase,P0,P):-
+	find_clause((A:-B),Rule,Rulebase),
+	prove_rb(true,_,[p((A:-B),Rule)|P0],P),!.
+
+prove_rb((A,B),Rulebase,P0,P):-
+	find_clause((A,B),Rule,Rulebase),
+	prove_rb(true,_,[p((A,B),Rule)|P0],P),!.
+
+% inference
+prove_rb((A,B),Rulebase,P0,P):- 
+    find_clause((B:-C),Rule,Rulebase),
+    prove_rb((A,C),Rulebase,[p((A,B),Rule)|P0],P),!.
+
+prove_rb(A,Rulebase,P0,P):-
+    find_clause((A:-B),Rule,Rulebase),
+    prove_rb(B,Rulebase,[p((A),Rule)|P0],P),!.
+```
+
+## Test
+
+Given the following knowledge base:
+
+```
+some animals are birds.
+birds fly.
+
+peter is human.
+peter is happy.
+peter is genius.
+geniuses win prizes.
+```
+
+This querys where tested
+
+```
+prolexa> "Explain why some animals fly".
+*** utterance(Explain why some animals fly)
+*** goal(explain_question((animal(_26630),fly(_26630)),_26586,_26372))
+*** proof([p((animal(ex),bird(ex)),[(animal(ex):-true),(bird(ex):-true)]),p((animal(ex),fly(ex)),[(fly(_26936):-bird(_26936))])])
+*** answer(some animals are birds; birds fly; therefore some animals fly)
+some animals are birds; birds fly; therefore some animals fly
+
+
+prolexa> "Explain why some humans are happy".
+*** utterance(explain why some humans are happy)
+*** goal(explain_question((human(_29730),happy(_29730)),_29686,_29446))
+*** proof([p(human(peter),[(human(peter):-true)]),p(happy(peter),[(happy(peter):-true)])])
+*** answer(peter is human; peter is happy; therefore some humans are happy)
+peter is human; peter is happy; therefore some humans are happy
+
+prolexa> "Explain why some humans win prizes".
+*** utterance(explain why some humans win prizes)
+*** goal(explain_question((human(_31610),win(_31610,prize(_31740))),_31564,_31324))
+*** proof([p(human(peter),[(human(peter):-true)]),p(genius(peter),[(genius(peter):-true)]),p(win(peter,prize(_31740)),[(win(_31918,prize(_31924)):-genius(_31918))])])
+*** answer(peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes)
+peter is human; peter is genius; geniuses win prizes; therefore some humans win prizes
+```
+
+We can therefore see the program is able to perform existential reasoning.
+
+# Negation
+
+To implement negation changes had to made to the following files: 1-prolexa.pl 2-prolexa_engine.pl 3-prolexa grammar. This section will detail and explain the changes required and document the testing done to evaluate the performance of the implementation. The negation was developed and tested in the context of happiness and teaching. In summary, we succeeded at enabling prolexa handle negation.
+
+## Prolexa.pl - Rules
+
+The changes to prolexa.pl included the changes in the rules which are defined below
+
+```
+stored_rule(1, [(teacher(X):-happy(X))]).
+stored_rule(1,[(happy(peter):-true)]).
+stored_rule(1, [(not(teacher(donald)):-true)]).
+```
+
+The first rules are based on prolog's syntax A:-B translating into if B is true then A is true. Therefore, the first rule implies that if you are happy then you are a teacher, the second rule implies that peter is happy and the third rule implies that donald is not a teacher.
+
+## prolexa_grammar.pl - Grammar
+
+The change in grammar was required to add the following features to prolexa: 1- understand negation in the question e.g. "explain why donald is not happy". 2-understand donald when being referred to in the sentence 3-respond with coherent sentences to the new required explaination. The changes can be found below:
+
+```
+pred(happy,  1,[a/happy]).
+pred(teacher,  1,[n/teacher]).
+```
+
+The above defines happy as an adjective and teacher as a noun, both required for the handling of the new example.
+
+```
+proper_noun(s, donald) --> [donald]
+```
+
+The above define donald as a singular proper noun enabling prolexa to refer to him appropriately with the correct grammar, e.g. using is, where needed
+
+```
+sentence(Q) --> [everyone], adjective(s,X=>S), predicate(s,X=>P), {Q=[(P:-S)]}.
+```
+
+The above definiton of sentence is required to enable prolexa to understand sentences starting with "everyone" and enable it to produce sentence with similiar structure. The rest of the sentence definition is the same as explained above. 
+
+```
+nominal_predicate(N,not(M)) --> nominal_verb(N),[not],property(s,M).
+```
+
+The above is a modification of the definition of the nominal_predicate provided in the already developed prolexa code. The only different is that it allow a negation to be present following a nominal verb and before a property e.g. it can handle "is not happy" compared to the default only able to handle "is happy".
+
+```
+sentence(Q) --> subject(N,X),predicate(N,not(X=>L)), {Q=[(not(L):-true)]}.
+question(Q) --> [is], subject(s, X),[not], property(s, X=>P), {Q=not(P)}.
+question(Q) --> [are], subject(p, X=>S),[not], property(p, X=>P), {Q=[(not(P):-S)]}.
+question(Q) --> [who], nominal_verb(N),[not], property(N, _=>P), {Q=not(P)}.
+```
+
+The above four definitions are extension of the definitions provided in prolexa's skeleton to allow prolexa to handle questions with "not" in it.
+
+## prolexa_engine.pl - rule base proving
+
+```
+prove_rb(not(B),Rulebase,P0,P):- % Added for negation
+	write_debug(B),nl,
+    find_clause((A:-B),Rule,Rulebase),
+	write_debug(A),nl,
+    prove_rb(not(A),Rulebase,[p(not(B),Rule)|P0],P).
+```
+
+The above enables handling negation while proving. It uses a clause of what is being negated i.e. not B e.g. "not happy" in donalds example and then tries to find A:-B. The prove will look up if donald is a teacher or not in the rule base for A and proves not(teacher(donald)) which is true as per the rule base. Therefore, A:-B evaluates to true.  
+
+## Testing
+
+The testing will document the outputs as they are from the interactive prolexa terminal.
+
+```
+Welcome to SWI-Prolog (threaded, 64 bits, version 8.4.2)
 SWI-Prolog comes with ABSOLUTELY NO WARRANTY. This is free software.
 Please run ?- license. for legal details.
 
-For online help and background, visit http://www.swi-prolog.org
+For online help and background, visit https://www.swi-prolog.org
 For built-in help, use ?- help(Topic). or ?- apropos(Word).
 
-?- prolexa_cli.
+1 ?- prolexa_cli.
 prolexa> "Tell me everything you know".
 *** utterance(Tell me everything you know)
-*** goal(all_rules(_7210))
-*** answer(every human is mortal. peter is human)
-every human is mortal. peter is human
-prolexa> "Peter is mortal".
-*** utterance(Peter is mortal)
-*** rule([(mortal(peter):-true)])
-*** answer(I already knew that Peter is mortal)
-I already knew that Peter is mortal
-prolexa> "Explain why Peter is mortal".
-*** utterance(Explain why Peter is mortal)
-*** goal(explain_question(mortal(peter),_8846,_8834))
-*** answer(peter is human; every human is mortal; therefore peter is mortal)
-peter is human; every human is mortal; therefore peter is mortal
+*** goal(all_rules(_2706))
+*** answer(everyone human is mortal. peter is human. some animals are birds. birds fly. donald is human. peter is genius. geniuses win prizes. everyone happy is a teacher. peter is happy. donald is not a teacher)
+everyone human is mortal. peter is human. some animals are birds. birds fly. donald is human. peter is genius. geniuses win prizes. everyone happy is a teacher. peter is happy. donald is not a teacher
+prolexa> "explain why peter is a teacher".
+*** utterance(explain why peter is a teacher)
+*** goal(explain_question(teacher(peter),_8328,_8084))
+*** proof([p(happy(peter),[(happy(peter):-true)]),p(teacher(peter),[(teacher(_8562):-happy(_8562))])])
+*** answer(peter is happy; everyone happy is a teacher; therefore peter is a teacher)
+peter is happy; everyone happy is a teacher; therefore peter is a teacher
+prolexa> "explain why donald is not happy".
+*** utterance(explain why donald is not happy)
+*** goal(explain_question(not(happy(donald)),_9690,_9450))
+*** happy(donald)
+
+*** teacher(donald)
+
+*** proof([p(not(teacher(donald)),[(not(teacher(donald)):-true)]),p(not(happy(donald)),[(teacher(_9934):-happy(_9934))])])
+*** answer(donald is not a teacher; everyone happy is a teacher; therefore donald is not happy)
+donald is not a teacher; everyone happy is a teacher; therefore donald is not happy
 ```
 
----
-
-## Amazon Alexa and Prolog integration ##
-Follow the steps below if you want to use the Amazon Alexa speech to text and
-text to speech facilities.
-This requires an HTTP interface that is exposed to the web, for which we use
-[Heroku](http://heroku.com).
-
-### Generating intent json for Alexa ###
-```
-swipl -g "mk_prolexa_intents, halt." prolexa.pl
-```
-The intents are found in `prolexa_intents.json`. You can copy and paste the
-contents of this file while building your skill on the
-[alexa developer console](https://developer.amazon.com/alexa/console/ask).
-
-
-### Localhost workflow (Docker) ###
-To build:
-```
-docker build . -t prolexa
-```
-
-To run:
-```
-docker run -it -p 4000:4000 prolexa
-```
-
-To test the server:
-```
-curl -v POST http://localhost:4000/prolexa -d @testjson --header "Content-Type: application/json"
-```
-
-### Heroku workflow ###
-#### Initial setup ####
-Prerequisites:
-
-- Docker app running in the background.
-- Installed Heroku CLI (`brew install heroku/brew/heroku` on MacOS).
-
----
-
-To see the status of your Heroku webapp use
-```
-heroku logs
-```
-
-in the `prolexa` directory.
-
----
-
-1. Clone this repository
-    ```
-    git clone git@github.com:So-Cool/prolexa.git
-    cd prolexa
-    ```
-
-2. Login to Heroku
-    ```
-    heroku login
-    ```
-
-3. Add Heroku remote
-    ```
-    heroku git:remote -a prolexa
-    ```
-
-#### Development workflow ####
-1. Before you start open your local copy of Prolexa and login to Heroku
-    ```
-    cd prolexa
-    heroku container:login
-    ```
-
-2. Change local files to your liking
-3. Once you're done push them to Heroku
-    ```
-    heroku container:push web
-    heroku container:release web
-    ```
-
-4. Test your skill and repeat steps *2.* and *3.* if necessary
-5. Once you're done commit all the changes and push them to GitHub
-    ```
-    git commit -am "My commit message"
-    git push origin master
-    ```
-
----
-
-# Prolexa Plus #
-Prolexa Plus is an extension to Prolexa which uses NLTK and Flair for part-of-speech tagging of nouns, verbs 
-and other words that are not currently in Prolexa's lexicon. It was implemented by 
-[Gavin Leech](https://github.com/g-leech) and [Dan Whettam](https://github.com/DWhettam)
-from the CDT19 cohort.
-
-```
-% python prolexa/prolexa_plus.py
-2020-11-10 18:33:12,559 loading file /Users/cspaf/.flair/models/en-pos-ontonotes-v0.5.pt
-Hello! I'm ProlexaPlus! Tell me anything, ask me anything.
-> tell me about Kacper
-*** utterance(tell me about Kacper)
-*** goal(all_answers(kacper,_60700))
-*** answer(I know nothing about kacper)
-I know nothing about kacper
-> Kacper is a postdoc
-*** utterance(Kacper is a postdoc)
-*** rule([(postdoc(kacper):-true)])
-*** answer(I will remember that Kacper is a postdoc)
-I will remember that Kacper is a postdoc
-> every postdoc is busy
-*** utterance(every postdoc is busy)
-*** rule([(busy(_53392):-postdoc(_53392))])
-*** answer(I will remember that every postdoc is busy)
-I will remember that every postdoc is busy
-> Kacper is busy
-*** utterance(Kacper is busy)
-*** rule([(busy(kacper):-true)])
-*** answer(I already knew that Kacper is busy)
-I already knew that Kacper is busy
-> explain why Kacper is busy
-*** utterance(explain why Kacper is busy)
-*** goal(explain_question(busy(kacper),_3046,_2824))
-*** answer(kacper is a postdoc; every postdoc is busy; therefore kacper is busy)
-kacper is a postdoc; every postdoc is busy; therefore kacper is busy
-```
-
-Prolexa Plus requires Python 3.6+ and SWI Prolog version 7.6.0+.
-Using a Python virtual environment is advised.
-Since the Prolog<->Python bridge is quite fragile, you should consider using:
-
-* *Windows Subsystem for Linux* if you are on Windows,
-* *Ubuntu Linux*,
-* *MacOS*, or
-* the provided *Docker image* (see below)
-
-to minimise potential issues.
-For more information on how to set up `pyswip` see:
-
-* <https://github.com/yuce/pyswip/blob/master/INSTALL.md> and
-* <https://github.com/yuce/pyswip>.
-
-## Installation ##
-### `pip install` ###
-This installation approach is recommended.
-The installation script may take a moment when processing the Prolexa package
-since language models need to be downloaded (which is achieved by automatically
-executing the `prolexa/setup_models.py` script) -- the
-`Running setup.py install for prolexa ... /` step.
-
-To install execute
-```
-pip install -e .
-```
-while in the root directory of this repository.
-The `-e` flag installs an editable version of the package, which allows you to
-edit the source to instantly update the installed version of the package
-(read more
-[here](https://pip.pypa.io/en/stable/reference/pip_install/#install-editable)).
-
-This installation comes with two command line tools:
-
-* `prolexa-plus` -- **launches the Prolexa Plus CLI**, and
-* `prolexa-setup-models` -- downloads `nltk` and `flair` language corpora and
-  models.
-
-### Executing Source ###
-1. Install Python dependencies
-   ```
-   pip install -r requirements.txt
-   ```
-2. Install language models and data
-   ```
-   python prolexa/setup_models.py
-   ```
-3. Run *Prolexa Plus*
-   ```
-   PYTHONPATH=./ python prolexa/prolexa_plus.py
-   ```
-
-### Docker ###
-Instead of a local install, it is possible to run *Prolexa Plus* with the
-designated Docker image.
-
-1. Build the *Prolexa Plus* Docker image
-   ```
-   docker build -t prolexa-plus -f Dockerfile-prolexa-plus ./
-   ```
-2. Run *Prolexa Plus* via Docker
-   ```
-   docker run -it prolexa-plus
-   ```
-
-## Tests ##
-**Python tests are currently broken.**
-To test the code execute
-```
-python prolexa/tests/test.py
-```
+The above testing shows that prolexa can now handle the rule teacher(X):-happy(X) as well as explain the negation of this rule.
